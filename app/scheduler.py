@@ -119,6 +119,7 @@ def run_pipeline() -> dict:
                     "source": item.source,
                     "url": item.url,
                     "hot_score": item.hot_score,
+                    "summary_zh": data.get("summary_zh", ""),
                 }
             )
         db.commit()

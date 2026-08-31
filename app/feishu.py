@@ -122,7 +122,11 @@ def push_news_digest(articles: list[dict]) -> bool:
             title_text = (article.get("title_zh") or "").strip() or article.get("title", "")
             url = article.get("url", "")
             source = article.get("source", "")
-            lines.append(f"**{i}.** [{title_text}]({url})\n来源: {source}")
+            summary = (article.get("summary_zh") or "").strip()
+            line = f"**{i}.** [{title_text}]({url})\n来源: {source}"
+            if summary:
+                line += f"\n{summary}"
+            lines.append(line)
 
         if not lines:
             return False
