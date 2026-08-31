@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 资讯聚合</title>
+  <style>
+    :root { --bg:#f7f8fa; --card:#fff; --text:#1a1a1a; --muted:#6b7280; --accent:#2563eb; --border:#e5e7eb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; position: sticky; top: 0; }
+    header h1 { margin: 0; font-size: 20px; }
+    header .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    main { max-width: 820px; margin: 24px auto; padding: 0 16px; }
+    article { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+    article h2 { margin: 0 0 8px; font-size: 17px; line-height: 1.4; }
+    article h2 a { color: var(--text); text-decoration: none; }
+    article h2 a:hover { color: var(--accent); }
+    .summary { color: #374151; font-size: 14px; line-height: 1.6; margin: 0 0 10px; }
+    .meta { color: var(--muted); font-size: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+    .meta a { color: var(--muted); }
+    .hot { color: #dc2626; font-weight: 600; }
+    .empty { text-align: center; color: var(--muted); padding: 60px 0; }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 24px 0; font-size: 14px; }
+    .pagination a { color: var(--accent); text-decoration: none; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; }
+    .pagination a:hover { background: #eff6ff; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI 资讯聚合</h1>
+    <div class="sub">每天 08:00 自动更新 · 共 {{ total }} 条{% if latest_cn %} · 最后更新 {{ latest_cn.strftime('%m-%d %H:%M') }}{% endif %} · 内容经事实核查</div>
+  </header>
+  <main>
+    {% if articles %}
+      {% for a in articles %}
+      <article>
+        <h2><a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ a.title_zh or a.title }}</a></h2>
+        {% if a.summary_zh %}<p class="summary">{{ a.summary_zh }}</p>{% endif %}
+        <div class="meta">
+          <span>来源：{{ a.source }}</span>
+          <span class="hot">热度 {{ '%.1f'|format(a.hot_score) }}</span>
+          {% if a.published_at %}<span>{{ a.published_at.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}
+          <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">查看原文 ↗</a>
+        </div>
+      </article>
+      {% endfor %}
+    {% else %}
+      <div class="empty">暂无内容。请先配置 .env 并触发一次更新。</div>
+    {% endif %}
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      {% if page > 1 %}<a href="/?page={{ page - 1 }}">← 上一页</a>{% endif %}
+      <span>第 {{ page }} / {{ total_pages }} 页</span>
+      {% if page < total_pages %}<a href="/?page={{ page + 1 }}">下一页 →</a>{% endif %}
+    </div>
+    {% endif %}
+  </main>
+</body>
+</html>
