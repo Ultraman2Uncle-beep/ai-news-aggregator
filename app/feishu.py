@@ -124,6 +124,12 @@ def push_news_digest(articles: list[dict]) -> bool:
             source = article.get("source", "")
             summary = (article.get("summary_zh") or "").strip()
             line = f"**{i}.** [{title_text}]({url})\n来源: {source}"
+            final_score = article.get("final_score")
+            category = (article.get("category") or "").strip()
+            if final_score is not None:
+                line += f"\n综合分 {final_score}"
+                if category:
+                    line += f" · {category}"
             if summary:
                 line += f"\n{summary}"
             lines.append(line)

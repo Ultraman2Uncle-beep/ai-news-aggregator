@@ -13,9 +13,11 @@ from app.config import settings
 from app.database import SessionLocal, init_db
 from app.feishu import push_news_digest
 from app.models import Article
+from app.pipeline.classify import classify
 from app.pipeline.dedup import dedup
 from app.pipeline.filter import filter_ai_related
 from app.pipeline.llm import refine_with_check
+from app.pipeline.rating import score_item
 from app.pipeline.scoring import normalize_scores
 
 
@@ -98,28 +100,41 @@ def run_pipeline() -> dict:
             exists = db.query(Article).filter(Article.url == item.url).first()
             if exists:
                 continue
+            title_zh = data.get("title_zh", "")
+            summary_zh = data.get("summary_zh", "")
+            category = classify(item.title, summary_zh or item.content, item.source)
+            scores = score_item(item, title_zh, summary_zh)
             db.add(
                 Article(
                     url=item.url,
                     title=item.title,
-                    title_zh=data.get("title_zh", ""),
-                    summary_zh=data.get("summary_zh", ""),
+                    title_zh=title_zh,
+                    summary_zh=summary_zh,
                     source=item.source,
                     source_type=item.source_type,
                     published_at=_parse_dt(item.published_at),
                     hot_score=item.hot_score,
+                    category=category,
+                    relevance_score=scores["relevance_score"],
+                    credibility_score=scores["credibility_score"],
+                    importance_score=scores["importance_score"],
+                    novelty_score=scores["novelty_score"],
+                    action_value_score=scores["action_value_score"],
+                    final_score=scores["final_score"],
                     raw_json=json.dumps(item.raw, ensure_ascii=False, default=str),
                 )
             )
             added += 1
             new_articles.append(
                 {
-                    "title_zh": data.get("title_zh", ""),
+                    "title_zh": title_zh,
                     "title": item.title,
                     "source": item.source,
                     "url": item.url,
                     "hot_score": item.hot_score,
-                    "summary_zh": data.get("summary_zh", ""),
+                    "summary_zh": summary_zh,
+                    "final_score": scores["final_score"],
+                    "category": category,
                 }
             )
         db.commit()
