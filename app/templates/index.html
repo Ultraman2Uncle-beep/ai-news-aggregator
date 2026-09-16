@@ -379,6 +379,10 @@
         <button id="refreshBtn" class="btn-icon" title="重新加载全部数据" aria-label="刷新">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></svg>
         </button>
+        <a href="/history" class="btn-icon" title="历史信息查询" aria-label="历史信息" style="text-decoration:none">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>历史</span>
+        </a>
       </div>
       <div class="topbar-date" id="todayStr"></div>
     </div>
@@ -503,6 +507,7 @@
         title: a.title || '',
         title_zh: a.title_zh || '',
         summary_zh: a.summary_zh || '',
+        brief: a.brief || '',
         source: a.source || '',
         url: a.url || '',
         category: a.category || '',
@@ -573,6 +578,7 @@
       if (a.is_read) card.classList.add('is-read');
       if (a.is_starred) card.classList.add('is-starred');
       const t = a.title_zh || a.title || '（无标题）';
+      const s = a.brief || a.summary_zh;
       const rankHtml = opts.rank != null
         ? '<div class="card-rank' + (opts.rank <= 3 ? ' top' : '') + '">' + String(opts.rank).padStart(2, '0') + '</div>'
         : '<div class="card-rank"></div>';
@@ -589,7 +595,7 @@
             (a.published_at ? '<span>' + fmtTime(a.published_at) + '</span>' : '') +
             catHtml +
           '</div>' +
-          (a.summary_zh ? '<p class="card-summary">' + esc(a.summary_zh) + '</p>' : '') +
+          (s ? '<p class="card-summary">' + esc(s) + '</p>' : '') +
           '<div class="card-scores">' +
             pill('综合', a.final_score) + ' ' +
             pill('相关', a.relevance_score) + ' ' +
@@ -639,6 +645,7 @@
     function buildRow(a, i, kind) {
       const row = el('div', 'row' + (kind === 'radar' ? ' radar-row' : ''));
       const t = a.title_zh || a.title || '（无标题）';
+      const s = a.brief || a.summary_zh;
       const urlHtml = a.url
         ? '<a href="' + esc(a.url) + '" target="_blank" rel="noopener noreferrer">' + esc(t) + '</a>'
         : esc(t);
@@ -655,7 +662,7 @@
             (kind !== 'radar' && a.published_at ? '<span>' + fmtTime(a.published_at) + '</span>' : '') +
             catHtml +
           '</div>' +
-          (a.summary_zh ? '<p class="row-summary">' + esc(a.summary_zh) + '</p>' : '') +
+          (s ? '<p class="row-summary">' + esc(s) + '</p>' : '') +
         '</div>' +
         '<div class="row-side">' + side + '</div>';
       return row;
@@ -757,7 +764,7 @@
     async function loadMust() {
       const box = $('#mustList');
       setLoading(box, 'sk');
-      const params = new URLSearchParams({ sort: 'final_score', per_page: '5' });
+      const params = new URLSearchParams({ sort: 'final_score', per_page: '5', days: '2' });
       if (state.filter.category) params.set('category', state.filter.category);
       if (state.filter.unread) params.set('status', 'unread');
       try {
@@ -790,7 +797,7 @@
       const rel = $('#relevantList'), tr = $('#trendList');
       setLoading(rel, 'sk'); setLoading(tr, 'rows');
       try {
-        const data = await api('/api/articles?sort=hot&per_page=40');
+        const data = await api('/api/articles?sort=hot&per_page=40&days=2');
         const list = data.articles.map(norm);
         const relList = list.slice()
           .sort((x, y) => (y.relevance_score - x.relevance_score) || (y.final_score - x.final_score) || (y.hot_score - x.hot_score))
@@ -812,7 +819,7 @@
       const box = $('#radarList');
       setLoading(box, 'rows');
       try {
-        const data = await api('/api/radar');
+        const data = await api('/api/radar?days=2');
         const list = (Array.isArray(data) ? data : (data.articles || [])).map(norm);
         box.innerHTML = '';
         if (!list.length) { setEmpty(box, '暂无模型发布信息'); return; }
@@ -827,7 +834,7 @@
       const box = $('#hotList');
       setLoading(box, 'rows');
       try {
-        const data = await api('/api/articles?sort=hot&per_page=10');
+        const data = await api('/api/articles?sort=hot&per_page=10&days=2');
         const list = data.articles.map(norm);
         box.innerHTML = '';
         if (!list.length) { setEmpty(box, '暂无数据'); return; }

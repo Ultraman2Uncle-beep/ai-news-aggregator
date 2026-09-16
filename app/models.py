@@ -21,6 +21,7 @@ class Article(Base):
     title: Mapped[str] = mapped_column(Text)  # 原文标题
     title_zh: Mapped[str] = mapped_column(Text, default="")  # 中文标题
     summary_zh: Mapped[str] = mapped_column(Text, default="")  # 中文简介
+    brief: Mapped[str] = mapped_column(Text, default="")  # ~50字一句话简述
     source: Mapped[str] = mapped_column(String(255), index=True)
     source_type: Mapped[str] = mapped_column(String(64), default="")
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

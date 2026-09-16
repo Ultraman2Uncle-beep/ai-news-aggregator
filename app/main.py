@@ -14,7 +14,7 @@ from app.database import get_db, init_db
 from app.models import Article
 from app.pipeline.briefing import generate_briefing, generate_weekly_summary
 from app.pipeline.radar import build_radar
-from app.scheduler import run_pipeline, start_scheduler
+from app.scheduler import recent_window_start, run_pipeline, start_scheduler
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -62,6 +62,11 @@ def index(request: Request, db: Session = Depends(get_db), page: int = 1):
     )
 
 
+@app.get("/history", response_class=HTMLResponse)
+def history(request: Request):
+    return templates.TemplateResponse(request, "history.html", {})
+
+
 @app.post("/update")
 def trigger_update():
     """手动触发一次更新（联调/测试用）。"""
@@ -75,6 +80,7 @@ def _article_to_dict(a: Article) -> dict:
         "title": a.title,
         "title_zh": a.title_zh,
         "summary_zh": a.summary_zh,
+        "brief": a.brief,
         "source": a.source,
         "url": a.url,
         "category": a.category,
@@ -109,9 +115,12 @@ def list_articles(
     sort: str = "final_score",
     page: int = 1,
     per_page: int = 20,
+    since: str | None = None,
+    date: str | None = None,
+    days: int | None = None,
     db: Session = Depends(get_db),
 ):
-    """文章列表 JSON API：支持分类/状态筛选、排序与分页。"""
+    """文章列表 JSON API：支持分类/状态筛选、日期窗口过滤、排序与分页。"""
     query = db.query(Article)
     if category:
         query = query.filter(Article.category == category)
@@ -119,6 +128,25 @@ def list_articles(
         query = query.filter(Article.is_read.is_(False))
     elif status == "starred":
         query = query.filter(Article.is_starred.is_(True))
+
+    if since:
+        try:
+            since_dt = datetime.strptime(since, "%Y-%m-%d")
+            query = query.filter(Article.published_at >= since_dt)
+        except ValueError:
+            pass
+    if date:
+        try:
+            date_dt = datetime.strptime(date, "%Y-%m-%d")
+            next_dt = date_dt + timedelta(days=1)
+            query = query.filter(
+                Article.published_at >= date_dt,
+                Article.published_at < next_dt,
+            )
+        except ValueError:
+            pass
+    if days is not None:
+        query = query.filter(Article.published_at >= recent_window_start(days - 1))
 
     if sort == "hot":
         query = query.order_by(Article.hot_score.desc())
@@ -172,9 +200,16 @@ def get_briefing(db: Session = Depends(get_db)):
 
 
 @app.get("/api/radar")
-def get_radar(db: Session = Depends(get_db)):
+def get_radar(days: int | None = None, db: Session = Depends(get_db)):
     """模型发布雷达。"""
-    articles = db.query(Article).all()
+    if days is not None:
+        articles = (
+            db.query(Article)
+            .filter(Article.published_at >= recent_window_start(days - 1))
+            .all()
+        )
+    else:
+        articles = db.query(Article).all()
     return build_radar(articles)
 
 

@@ -46,6 +46,15 @@ def _parse_dt(s: str | None) -> datetime | None:
     return dt.astimezone(_CN_TZ).replace(tzinfo=None)
 
 
+def recent_window_start(days_back: int = 1) -> datetime:
+    """返回窗口起点：今天北京时间往前 days_back 天的 00:00（naive datetime，与 published_at 语义一致）。"""
+    now_cn = datetime.now(_CN_TZ)
+    start = (now_cn - timedelta(days=days_back)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return start.replace(tzinfo=None)
+
+
 def run_pipeline() -> dict:
     """执行一次完整流水线：采集 → 去重 → 过滤 → 热度 → LLM → 入库。"""
     init_db()
@@ -110,6 +119,7 @@ def run_pipeline() -> dict:
                     title=item.title,
                     title_zh=title_zh,
                     summary_zh=summary_zh,
+                    brief=data.get("brief", ""),
                     source=item.source,
                     source_type=item.source_type,
                     published_at=_parse_dt(item.published_at),
@@ -133,6 +143,8 @@ def run_pipeline() -> dict:
                     "url": item.url,
                     "hot_score": item.hot_score,
                     "summary_zh": summary_zh,
+                    "brief": data.get("brief", ""),
+                    "published_at": _parse_dt(item.published_at),
                     "final_score": scores["final_score"],
                     "category": category,
                 }
@@ -141,11 +153,17 @@ def run_pipeline() -> dict:
     finally:
         db.close()
 
-    # 7. 飞书推送（新增 > 0 时按热度取 top 10，best-effort）
+    # 7. 飞书推送（新增 > 0 时按窗口过滤后取综合分 top 10，best-effort）
     if added > 0:
         try:
+            window_start = recent_window_start()
+            in_window = [
+                a
+                for a in new_articles
+                if a["published_at"] is not None and a["published_at"] >= window_start
+            ]
             top_articles = sorted(
-                new_articles, key=lambda a: a["hot_score"], reverse=True
+                in_window, key=lambda a: a["final_score"], reverse=True
             )[:10]
             push_news_digest(top_articles)
         except Exception as exc:  # noqa: BLE001

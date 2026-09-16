@@ -122,7 +122,7 @@ def push_news_digest(articles: list[dict]) -> bool:
             title_text = (article.get("title_zh") or "").strip() or article.get("title", "")
             url = article.get("url", "")
             source = article.get("source", "")
-            summary = (article.get("summary_zh") or "").strip()
+            summary = (article.get("brief") or "").strip() or (article.get("summary_zh") or "").strip()
             line = f"**{i}.** [{title_text}]({url})\n来源: {source}"
             final_score = article.get("final_score")
             category = (article.get("category") or "").strip()

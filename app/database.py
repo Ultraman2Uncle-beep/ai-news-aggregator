@@ -21,6 +21,7 @@ _NEW_COLUMNS: dict[str, str] = {
     "final_score": "FLOAT DEFAULT 0.0",
     "is_read": "BOOLEAN DEFAULT 0",
     "is_starred": "BOOLEAN DEFAULT 0",
+    "brief": "TEXT DEFAULT ''",
 }
 
 

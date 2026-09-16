@@ -18,7 +18,8 @@ _SYSTEM_PROMPT = """你是一个严格的信息提炼助手。你的任务是把
 6. 严格只输出 JSON，不要输出任何其他文字、解释或 markdown 代码块。
 
 输出格式：
-{"title_zh": "...", "summary_zh": "...", "is_ai_related": true/false}
+{"title_zh": "...", "summary_zh": "...", "brief": "...", "is_ai_related": true/false}
+其中 brief 是约 50 字的一句话中文简述，用一句话说清这条信息「是什么、为什么值得关注」；若原文信息不足则如实写「原文信息有限」。
 """
 
 _SELFCHECK_PROMPT = """你是严格的事实核查员。请判断下面"中文摘要"里的每一个事实性陈述（数字、人名、机构、事件、日期、产品名）是否都能在"原文"中找到依据。
@@ -57,7 +58,7 @@ def _call_json(client: OpenAI, system: str, user: str) -> dict:
             {"role": "user", "content": user},
         ],
         temperature=0.0,
-        max_tokens=600,
+        max_tokens=800,
         response_format={"type": "json_object"},
         # 关闭思考模式以节省 token（如当前模型版本不支持该参数可删除此行）
         extra_body={"enable_thinking": False},
@@ -73,7 +74,7 @@ def refine(item: RawItem) -> dict:
     """单条提炼+翻译。"""
     data = _call_json(_client(), _SYSTEM_PROMPT, _build_user_msg(item))
     if not data:
-        return {"title_zh": item.title, "summary_zh": "", "is_ai_related": True}
+        return {"title_zh": item.title, "summary_zh": "", "brief": "", "is_ai_related": True}
     return data
 
 
